@@ -38,9 +38,7 @@
 <!-- ═══════════════════════ UNIT 3 — THE BUILD ═══════════════════════ -->
 
 ## What This Does
-
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
-
+FitFindr helps a user find a thrifted item and style it with pieces they already own. It parses the user's description, size, and maximum price, then searches the listings for matching items. If no matches are found, it saves a clear message explaining that the user can change the description, size, or price and stops before requesting outfit advice. When a match is found, FitFindr selects the top result, generates one or two outfit suggestions using the user's wardrobe, and creates a fit card that highlights the item, price, platform, and styling idea; if the wardrobe is empty, it provides general styling advice instead.
 
 
 ---
@@ -71,17 +69,6 @@
 
 ## Planning Loop
 
-<!-- Your branch rule, stated as a rule — the condition AND both paths — plus
-     the file and function that holds it.
-
-     Like this:
-       "If search_listings returns an empty list, put a message in the session
-        and stop. Otherwise take the first result and go to suggest_outfit."
-        — agent.py::run_agent
-
-     The grader checks your code against what you claim here, so the file and
-     function have to be real. -->
-
 **Branch rule:** If search_listings returns no results, the agent should let the user know that no matching items were found, explain that they can try changing their search, and stop without calling suggest_outfit. Otherwise, select the first result and call the suggest_outfit function with that item and the wardrobe, and continue to create_fit_card function.
 
 **Where it lives:** `agent.py::run_agent`
@@ -97,12 +84,6 @@ the first result becomes `selected_item`, which is passed with `wardrobe` to
 ---
 
 ## Sample Run
-
-<!-- Two things go here.
-
-     1. One FULL query and its output, pasted as text.
-     2. Your three per-tool terminal tests — the command and what it printed. -->
-
 **One full query**
 
 ```
@@ -110,26 +91,26 @@ $ python app.py ask 'find me a pair of jeans under $40'
 
 ```
 
-  Found:    Straight Leg Black Jeans — Faded — $30.0 on thredUp
+     Found:    Straight Leg Black Jeans — Faded — $30.0 on thredUp
 
-  Outfit:   Here are two complete outfits centered around your new Levi's faded black straight-leg jeans, built using pieces exclusively from your wardrobe:
+     Outfit:   Here are two complete outfits centered around your new Levi's faded black straight-leg jeans, built using pieces exclusively from your wardrobe:
 
-### Outfit 1: Casual Grunge (Edgy & Relaxed)
-* **Top:** White ribbed tank top
-* **Outerwear:** Vintage black denim jacket (layered over the tank)
-* **Shoes:** Black combat boots
-* **Accessories:** Black crossbody bag
-* **Styling details:** Tuck the white ribbed tank into the mid-rise, faded black jeans to highlight the waist, throw on the cropped vintage black denim jacket for a tonal denim-on-denim look, and finish with the combat boots and black crossbody bag to lean into the grunge aesthetic.
+     ### Outfit 1: Casual Grunge (Edgy & Relaxed)
+     * **Top:** White ribbed tank top
+     * **Outerwear:** Vintage black denim jacket (layered over the tank)
+     * **Shoes:** Black combat boots
+     * **Accessories:** Black crossbody bag
+     * **Styling details:** Tuck the white ribbed tank into the mid-rise, faded black jeans to highlight the waist, throw on the cropped vintage black denim jacket for a tonal denim-on-denim look, and finish with the combat boots and black crossbody bag to lean into the grunge aesthetic.
 
-### Outfit 2: Streetwear Sporty (Cozy & Layered)
-* **Top:** Oversized grey crewneck sweatshirt
-* **Shoes:** Chunky white sneakers
-* **Accessories:** Black crossbody bag
-* **Styling details:** Let the oversized grey crewneck hang loosely over the cropped, straight-leg fit of the jeans for a relaxed silhouette. Pair with the chunky white sneakers to add a sporty contrast to the faded black denim, and wear the black crossbody bag to keep your hands free.
+     ### Outfit 2: Streetwear Sporty (Cozy & Layered)
+     * **Top:** Oversized grey crewneck sweatshirt
+     * **Shoes:** Chunky white sneakers
+     * **Accessories:** Black crossbody bag
+     * **Styling details:** Let the oversized grey crewneck hang loosely over the cropped, straight-leg fit of the jeans for a relaxed silhouette. Pair with the chunky white sneakers to add a sporty contrast to the faded black denim, and wear the black crossbody bag to keep your hands free.
 
-  Fit card: Scored these faded black Levi's straight-leg jeans on thredUp for just $30, and they’ve instantly become my go-to for effortless grunge fits. I love styling them with a crisp white tank and combat boots, or dressing them down with an oversized grey crewneck and chunky sneakers. Natural fading gives them that perfectly broken-in vintage look right out of the box.
+     Fit card: Scored these faded black Levi's straight-leg jeans on thredUp for just $30, and they’ve instantly become my go-to for effortless grunge fits. I love styling them with a crisp white tank and combat boots, or dressing them down with an oversized grey crewneck and chunky sneakers. Natural fading gives them that perfectly broken-in vintage look right out of the box.
 
-2 model calls this session, 1719 prompt + 331 output tokens
+     2 model calls this session, 1719 prompt + 331 output tokens
 
 **The three tools, tested one at a time**
 
@@ -168,25 +149,15 @@ Nothing beats a broken-in pair of classic indigo Levi's 501s with just the right
 ---
 
 ## How I Used AI
-
-<!-- Two specific moments. What you asked, what came back, what you changed.
-
-     "I used Claude to help me code" is not enough.
-
-     "I gave Claude my search_listings spec. It returned None on no match
-     instead of an empty list, so I changed it" is the level we want. -->
-
 **Moment 1**
-
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Copilot to help me implement search_listings according to the project requirements.
+- *What came back:* The initial version returned some irrelevant listings because initially it only matched keywords found only in the listings’ descriptions, even when those keywords did not reflect what the user was asking for.
+- *What I changed:* I made the matching stricter by requiring keywords to appear in the listing title or style tags before checking the description. Listings with no title or style-tag matches are skipped. This reduced false positives and made the search results more relevant.
 
 **Moment 2**
-
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Copilot to review the acceptance criteria I wrote for FitFindr.
+- *What came back:* Copilot pointed out that my third criterion was too general because it did not specify how to verify that the listing found by search_listings was passed correctly to suggest_outfit.
+- *What I changed:* I made the criterion more precise by requiring the listing ID returned by search_listings to match the listing ID received by suggest_outfit, which made the state transfer easy to test and verify.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
