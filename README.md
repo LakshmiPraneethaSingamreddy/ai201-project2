@@ -82,13 +82,17 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If search_listings returns no results, the agent should let the user know that no matching items were found, explain that they can try changing their search, and stop without calling suggest_outfit. Otherwise, select the first result and call the suggest_outfit function with that item and the wardrobe, and continue to create_fit_card function.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex extracts an optional size and maximum price,
+then removes those constraints and common request phrases from the query to
+produce the description.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** `parsed` is passed to `search_results`;
+the first result becomes `selected_item`, which is passed with `wardrobe` to
+`outfit_suggestion`; that suggestion and the item produce `fit_card`.
 
 ---
 
@@ -102,9 +106,30 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'find me a pair of jeans under $40'
 
 ```
+
+  Found:    Straight Leg Black Jeans — Faded — $30.0 on thredUp
+
+  Outfit:   Here are two complete outfits centered around your new Levi's faded black straight-leg jeans, built using pieces exclusively from your wardrobe:
+
+### Outfit 1: Casual Grunge (Edgy & Relaxed)
+* **Top:** White ribbed tank top
+* **Outerwear:** Vintage black denim jacket (layered over the tank)
+* **Shoes:** Black combat boots
+* **Accessories:** Black crossbody bag
+* **Styling details:** Tuck the white ribbed tank into the mid-rise, faded black jeans to highlight the waist, throw on the cropped vintage black denim jacket for a tonal denim-on-denim look, and finish with the combat boots and black crossbody bag to lean into the grunge aesthetic.
+
+### Outfit 2: Streetwear Sporty (Cozy & Layered)
+* **Top:** Oversized grey crewneck sweatshirt
+* **Shoes:** Chunky white sneakers
+* **Accessories:** Black crossbody bag
+* **Styling details:** Let the oversized grey crewneck hang loosely over the cropped, straight-leg fit of the jeans for a relaxed silhouette. Pair with the chunky white sneakers to add a sporty contrast to the faded black denim, and wear the black crossbody bag to keep your hands free.
+
+  Fit card: Scored these faded black Levi's straight-leg jeans on thredUp for just $30, and they’ve instantly become my go-to for effortless grunge fits. I love styling them with a crisp white tank and combat boots, or dressing them down with an oversized grey crewneck and chunky sneakers. Natural fading gives them that perfectly broken-in vintage look right out of the box.
+
+2 model calls this session, 1719 prompt + 331 output tokens
 
 **The three tools, tested one at a time**
 
@@ -115,7 +140,7 @@ $ python -c "from tools import search_listings; print(search_listings('graphic t
 [{'id': 'lst_002', 'title': 'Y2K Baby Tee — Butterfly Print', 'description': 'Super cute early 2000s baby tee with butterfly graphic. Fitted crop length. Tag says medium but fits like a small.', 'category': 'tops', 'style_tags': ['y2k', 'vintage', 'graphic tee', 'cottagecore'], 'size': 'S/M', 'condition': 'excellent', 'price': 18.0, 'colors': ['white', 'pink', 'purple'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_033', 'title': 'Vintage Band Tee — Faded Grey', 'description': 'Faded grey band-style tee with distressed graphic. Crew neck. Fits boxy. Well-loved but no holes or major damage.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'band tee', 'graphic tee', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 19.0, 'colors': ['grey', 'charcoal'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_006', 'title':'Graphic Tee — 2003 Tour Bootleg Style', 'description': 'Vintage-style bootleg tee with fadedgraphic. Slightly boxy fit. 100% cotton, soft and worn-in.', 'category': 'tops', 'style_tags': ['graphic tee', 'vintage', 'grunge', 'streetwear', 'band tee'], 'size': 'L', 'condition': 'good', 'price': 24.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_015', 'title': 'Vintage Graphic Hoodie — Faded Black', 'description': 'Faded black pullover hoodie with barely-visible vintage graphic on the chest. Cozy interior. Some pilling but adds to the worn-in look.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'graphic', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 26.0, 'colors': ['black', 'charcoal'], 'brand': None, 'platform': 'depop'}]
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
 
 ```
 Here are two complete outfits centered around the Vintage Levi's 501 Jeans, built entirely from your wardrobe:
@@ -136,7 +161,7 @@ Here are two complete outfits centered around the Vintage Levi's 501 Jeans, buil
 * **Accessories:** Brown leather belt, Black crossbody bag
 * **Styling details:** Use the brown leather belt to define the waist of the jeans. Layer theblack cropped zip hoodie under the slightly cropped vintage black denim jacket for a textured, all-black-on-denim contrast. Finish with the lace-up combat boots to lean into the grunge and vintage aesthetic.
 ```
-$ python -c "from tools import create_fit_card; ..."
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
 
 ```
 Nothing beats a broken-in pair of classic indigo Levi's 501s with just the right amount of knee fading. I love styling these vintage gems with crisp white sneakers for that effortless everyday streetwear look. Snag this pair over on Depop for just $38 before someone else beats youto it!
