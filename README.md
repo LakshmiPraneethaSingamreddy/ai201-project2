@@ -59,24 +59,24 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Searches the listings data for items matching the user's description, optional size, and optional maximum price. It ranks matching listings and returns the best matches first.
+- **Inputs:** description (str), size (str), max_price(float)
+- **Returns:** returns a list of dicts, where each dict has id (str), title(str), description(str), category (str), style_tags (list), size(str), condition (str), price(float), colors(list), brand(str), platform(str) fields
+- **When it has nothing:** It returns an empty list
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Given the thrifted item and the user's wardrobe, it asks model to suggest one or two outfits for the user.
+- **Inputs:** new_item (dict), wardrobe (dict)
+- **Returns:** Returns the models response of suggested outfits (str)
+- **When it has nothing:** When the wardrobe is empty, it asks the model for general styling ideas instead of using specific wardrobe pieces.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model to write a short, post-ready caption about the thrifted item and suggested outfit.
+- **Inputs:** outfit (str), new_item (dict)
+- **Returns:** A string containing a two-to-four sentence caption that mentions the item, price, platform, and style.
+- **When it has nothing:** When the outfit is empty it return "I need an outfit suggestion before I can create a fit card" without calling the model.
 
 ---
 

@@ -20,12 +20,44 @@ That last line is what your loop branches on. "Returns a list" earns nothing —
 the description has to say what is *in* the list.
 """
 
+import json
+import re
+
 import config  # noqa: F401 — you'll use this in search_listings
 from generate import generate
 from utils.data_loader import load_listings
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
+_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "but", "by", "can",
+    "could", "for", "from", "has", "have", "how", "if", "in", "into",
+    "is", "it", "its", "just", "like", "look", "looking", "more", "need",
+    "not", "of", "on", "one", "or", "out", "over", "size", "so", "that",
+    "the", "their", "them", "there", "these", "they", "this", "those",
+    "to", "too", "under", "up", "very", "want", "wanted", "was", "we",
+    "were", "what", "when", "where", "which", "who", "why", "with",
+    "would", "you", "your"
+}
+
+def _keywords(text:str) -> set[str]:
+    "Lowercase words worth matching on, stopwords removed"
+    words = re.findall(r"[a-z0-9]+",(text or "").lower())
+    return {w for w in words if w not in _STOPWORDS and len(w) > 1}
+
+def _size_tokens(size:str) -> set[str]: #for figuring out what size does the user is looking for
+    cleaned = re.sub(r"\([^)]*\)", "", size or "")
+    parts = [p.strip().upper() for p in cleaned.split("/")]
+    return {p for p in parts if p}
+
+def _size_matches(wanted:str, listing_size:str) -> bool:
+    if not wanted:
+        return True
+    listing_tokens = _size_tokens(listing_size)
+    if any(token.startswith("ONE SIZE") for token in listing_tokens):
+        return True
+    return bool(_size_tokens(wanted) & listing_tokens)
+
 
 def search_listings(
     description: str,
@@ -78,8 +110,39 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    # TODO: replace this with your implementation
-    return []
+    wanted_keywords = _keywords(description)
+    matches: list[dict] = []
+
+    for listing in load_listings():
+        if max_price is not None:
+            try:
+                if float(listing.get("price", 0)) > float(max_price):
+                    continue
+            except (TypeError, ValueError):
+                continue
+
+        if size is not None and not _size_matches(size, listing.get("size", "")):
+            continue
+
+        primary_text = " ".join([
+            listing.get("title", ""),
+            " ".join(listing.get("style_tags", [])),
+        ])
+        primary_score = len(wanted_keywords & _keywords(primary_text))
+
+        if primary_score > 0:
+            description_score = len(
+                wanted_keywords & _keywords(listing.get("description", ""))
+            )
+            listing["_match_score"] = (primary_score * 2) + description_score
+            matches.append(listing)
+
+    matches.sort(key=lambda item: (-item["_match_score"], item.get("price", float("inf"))))
+
+    for listing in matches:
+        listing.pop("_match_score", None)
+
+    return matches[: config.SEARCH_RESULT_LIMIT]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
@@ -112,8 +175,36 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    wardrobe_items = wardrobe.get("items", [])
+    item_details = json.dumps(new_item, indent=2, sort_keys=True)
+
+    if not wardrobe_items:
+        prompt = f"""
+            Suggest one or two wearable outfit ideas for this thrifted item:
+
+            {item_details}
+
+            The user has not entered any wardrobe items yet, so give general styling
+            advice using pieces someone could reasonably own or shop for. Mention colors,
+            layers, shoes, and accessories where useful. Be concise and practical.
+            """.strip()
+    else:
+        wardrobe_details = json.dumps(wardrobe_items, indent=2, sort_keys=True)
+        prompt = f"""
+            Suggest one or two complete outfits centered on this thrifted item:
+
+            {item_details}
+
+            Build the outfits from the user's existing wardrobe below whenever possible.
+            Name the exact wardrobe pieces you use, and add practical styling details such
+            as colors, layers, shoes, or accessories. Do not invent wardrobe items that
+            are not listed. Be concise and practical.
+
+            User wardrobe:
+            {wardrobe_details}
+            """.strip()
+
+    return generate(prompt)
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -152,5 +243,24 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return "I need an outfit suggestion before I can create a fit card."
+
+    item_details = json.dumps(new_item, indent=2, sort_keys=True)
+    prompt = f"""
+        Write a short, post-ready fit card caption for this thrifted item and
+        the suggested outfit below.
+
+        Item details:
+        {item_details}
+
+        Outfit:
+        {outfit.strip()}
+
+        Write exactly two to four sentences. Make it sound natural and specific
+        to the item's style and colors, rather than like a product listing.
+        Mention the item, its price, and its platform once each. Return only
+        the caption, with no title, quotation marks, or extra explanation.
+        """.strip()
+
+    return generate(prompt)
