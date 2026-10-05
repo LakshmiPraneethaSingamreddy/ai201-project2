@@ -20,83 +20,51 @@ data earns credit; *"80% seemed reasonable"* does not.
 ---
 
 ## 1. A matching query completes all three tools
-
 Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
-
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
-
+My search is based entirely on keyword matching across the listing title,
+style tags, and description, so some valid queries may use phrasing that does
+not overlap with the listing data.
 ---
 
 ## 2. An impossible query stops before the second tool
-
 Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
-
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
+Because an empty search result means there is no thrifted item to pass to
+suggest_outfit function. The agent should therefore stop before calling that tool in the all 5 of 5 tries and return a message telling the user what to change.
 
 ---
 
 ## 3. Something about state
-
-<!-- YOU WRITE THIS ONE.
-
-     How would you know that the item your search found is the same item the
-     next tool received? Name something countable or observable.
-
-     This is the criterion people find hardest, because state failure doesn't
-     look like state failure — it looks like a tool problem. Something that
-     compares session["selected_item"] against what actually reached
-     suggest_outfit is the shape you're after. -->
-
-
-
+In at least 4 of 5 successful runs, the listing ID returned by
+`search_listings` must be the same listing ID passed to "suggest_outfit" function.
 **Why this target:**
-
-
+This checks that the listing found by the search is the same listing passed to the next tool. If the search finds nothing, the agent stops before calling suggest_outfit, so that run is not included in the state comparison.
 
 ---
 
 ## 4. Something about the fit card
-
-<!-- YOU WRITE THIS ONE.
-
-     The fit card calls a model, so the same input can produce different words
-     each time. That's not a bug — it's the nature of the tool. So what would
-     make it acceptable?
-
-     Think about what you'd actually be unhappy to see. A caption that never
-     mentions the price? Two different items producing the same opening
-     sentence? A card longer than a caption anyone would post? Any of those can
-     be turned into a number. -->
-
-
-
+In at least 4 of 5 fit-card runs, the returned caption must mention the
+selected item's title, its price, and its platform, and each of those three
+details must appear exactly once.
 **Why this target:**
-
+The fit card should include the selected item's identifying details, price, and
+platform exactly once so it reads like a natural post rather than a repeated
+product description.
 
 
 ---
 
 ## 5. Your choice
-
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
-
-
-
+In at least 4 of 5 searches where the user provides a `max_price` or `size`,
+every returned listing must satisfy each provided filter: its price must be at
+or below `max_price`, and its size must match the requested size.
 **Why this target:**
-
-
+`search_listings` must apply the provided price and size filters in addition to
+the description keywords, so it does not return a listing that matches the
+style description but violates the user's price ceiling or requested size.
 
 ---
 
