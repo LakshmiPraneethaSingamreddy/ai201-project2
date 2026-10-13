@@ -103,7 +103,7 @@ def search_listings(
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
     wanted_keywords = _keywords(description)
-    matches: list[dict] = []
+    scored_matches: list[tuple[int, dict]] = []
 
     for listing in load_listings():
         if max_price is not None:
@@ -126,15 +126,17 @@ def search_listings(
             description_score = len(
                 wanted_keywords & _keywords(listing.get("description", ""))
             )
-            listing["_match_score"] = (primary_score * 2) + description_score
-            matches.append(listing)
+            match_score = (primary_score * 2) + description_score
+            scored_matches.append((match_score, listing))
 
-    matches.sort(key=lambda item: (-item["_match_score"], item.get("price", float("inf"))))
+    scored_matches.sort(
+        key=lambda item: (-item[0], item[1].get("price", float("inf")))
+    )
 
-    for listing in matches:
-        listing.pop("_match_score", None)
-
-    return matches[: config.SEARCH_RESULT_LIMIT]
+    return [
+        listing
+        for _, listing in scored_matches[: config.SEARCH_RESULT_LIMIT]
+    ]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────

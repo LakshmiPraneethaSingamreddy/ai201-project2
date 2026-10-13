@@ -1,23 +1,22 @@
 """
-The FitFindr planning loop.
+The FitFindr planning flow.
 
 This is the file that makes FitFindr an agent rather than a script. It decides
 which tool to run next based on what the last one returned.
 
-If your loop calls all three tools no matter what comes back, you have a list
-of function calls. A loop looks at the last result before it picks the next
-step. **That branch is the graded part of this unit.**
+If the search returns no listings, the flow stops before calling the
+model-backed tools. **That branch is the graded part of this unit.**
 
 Build and test your three tools in `tools.py` first. Then come here.
 
     python agent.py          runs both example paths below
 """
 
-import config
 import re
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
 from generate import ModelUnavailable
+from mcp_client import call_tool
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -48,119 +47,89 @@ def new_session(query: str, wardrobe: dict) -> dict:
     }
 
 
-# ── planning loop ─────────────────────────────────────────────────────────────
+# ── planning flow ────────────────────────────────────────────────────────────
+
+def parse_query(query: str) -> dict:
+    """Extract the description, requested size, and price limit from a query."""
+    price_match = re.search(
+        r"\b(?:under|below|less than|up to|max(?:imum)?(?: price)?)"
+        r"\s*\$?\s*(\d+(?:\.\d+)?)",
+        query,
+        flags=re.IGNORECASE,
+    )
+    size_match = re.search(
+        r"\bsize\s*[:=]?\s*([A-Za-z0-9]+(?:\s*/\s*[A-Za-z0-9]+)?)",
+        query,
+        flags=re.IGNORECASE,
+    )
+
+    max_price = float(price_match.group(1)) if price_match else None
+    size = size_match.group(1).strip() if size_match else None
+    description = query
+    if price_match:
+        description = description.replace(price_match.group(0), "")
+    if size_match:
+        description = description.replace(size_match.group(0), "")
+    description = re.sub(
+        r"\b(?:looking for|i want|i need|find me|show me)\b",
+        "",
+        description,
+        flags=re.IGNORECASE,
+    )
+    description = re.sub(r"\s+", " ", description).strip(" ,")
+
+    return {
+        "description": description,
+        "size": size,
+        "max_price": max_price,
+    }
+
 
 def run_agent(query: str, wardrobe: dict) -> dict:
     """
-    Run the loop once and return the finished session.
+    Run the planning flow once and return the finished session.
 
-    Args:
-        query:    what the user asked for, in plain language
-                  (e.g. "vintage graphic tee under $30, size M").
-        wardrobe: a wardrobe dict — get_example_wardrobe() or
-                  get_empty_wardrobe() from utils/data_loader.py.
-
-    Returns:
-        The session dict. **Check session["error"] first** — if it isn't None,
-        the run ended early and the later fields will still be None.
-
-    ─────────────────────────────────────────────────────────────────────────
-    TODO — build this, following the branch rule you wrote in Milestone 2.
-
-      1. Start a session with new_session().
-
-      2. Count the times round the loop, and call trace.check_iterations(count)
-         on each one before you go again. It raises when the count passes
-         MAX_ITERATIONS in config.py — see trace.py.
-
-      3. Parse the query into a description, a size, and a max_price. Regex,
-         string splitting, or asking the model are all fine — say which you
-         chose in your README. Put the result in session["parsed"].
-
-      4. Call search_listings() with what you parsed.
-         Put the results in session["search_results"].
-
-         ⚠️ THIS IS THE BRANCH. If nothing came back:
-              - put a message in session["error"] saying what the user could
-                change — "No results" is not that message
-              - return the session
-              - do NOT call suggest_outfit with nothing
-
-      5. Choose an item — the first result is fine. Put it in
-         session["selected_item"].
-
-      6. Call suggest_outfit() with the selected item and the wardrobe.
-         Put the result in session["outfit_suggestion"].
-
-      7. Call create_fit_card() with the outfit and the item.
-         Put the result in session["fit_card"].
-
-      8. Return the session.
-
-    ─────────────────────────────────────────────────────────────────────────
-    IN UNIT 4 you come back and add two things:
-
-      • Trace calls. One per step. `trace.step("search_listings", inputs=...,
-        returned=...)` — see trace.py. Your README needs the output.
-
-      • A handler for ModelUnavailable, so a bad key produces a message rather
-        than a stack trace. The import is already at the top of this file.
+    The search result branch stops before the model-backed tools when no
+    listings match the parsed query.
     """
     session = new_session(query, wardrobe)
+    count = 1
 
-    count = 0
-    while True:
-        count += 1
-        trace.check_iterations(count)
+    count+=1
+    trace.check_iterations(count)
+    parsed = parse_query(query)
+    session["parsed"] = parsed
 
-        price_match = re.search(
-            r"\b(?:under|below|less than|up to|max(?:imum)?(?: price)?)\s*\$?\s*(\d+(?:\.\d+)?)",
-            query,
-            flags=re.IGNORECASE,
-        )
-        size_match = re.search(
-            r"\bsize\s*[:=]?\s*([A-Za-z0-9]+(?:\s*/\s*[A-Za-z0-9]+)?)",
-            query,
-            flags=re.IGNORECASE,
-        )
+    count += 1
+    trace.check_iterations(count)
+    #results = search_listings(parsed["description"], parsed["size"], parsed["max_price"])
+    results = call_tool("search_listings", {"description": parsed["description"], "size": parsed["size"], "max_price": parsed["max_price"]})
+    session["search_results"] = results
+    trace.step("search_listings (via MCP)", inputs=str(parsed), returned=results,
+           note=f"{len(results)} match(es)")
 
-        max_price = float(price_match.group(1)) if price_match else None
-        size = size_match.group(1).strip() if size_match else None
-        description = query
-        if price_match:
-            description = description.replace(price_match.group(0), "")
-        if size_match:
-            description = description.replace(size_match.group(0), "")
-        description = re.sub(r"\b(?:looking for|i want|i need|find me|show me)\b", "", description, flags=re.IGNORECASE)
-        description = re.sub(r"\s+", " ", description).strip(" ,")
-
-        session["parsed"] = {
-            "description": description,
-            "size": size,
-            "max_price": max_price,
-        }
-        session["search_results"] = search_listings(
-            session["parsed"]["description"],
-            session["parsed"]["size"],
-            session["parsed"]["max_price"],
-        )
-
-        if not session["search_results"]:
-            session["error"] = (
-                "No matching items were found. Try changing the description, "
-                "size, or maximum price and search again."
-            )
-            return session
-
-        session["selected_item"] = session["search_results"][0]
-        session["outfit_suggestion"] = suggest_outfit(
-            session["selected_item"], session["wardrobe"]
-        )
-        session["fit_card"] = create_fit_card(
-            session["outfit_suggestion"],
-            session["selected_item"],
+    if not session["search_results"]:
+        session["error"] = (
+            "No matching items were found. Try changing the description, "
+            "size, or maximum price and search again."
         )
         return session
+
+    session["selected_item"] = results[0]
+    trace.step("select_item", returned = session["selected_item"])
+    session["outfit_suggestion"] = suggest_outfit(
+        session["selected_item"],
+        session["wardrobe"],
+    )
+    trace.step("suggest_outfit", inputs=session["selected_item"],
+           returned=session["outfit_suggestion"])
+    session["fit_card"] = create_fit_card(
+        session["outfit_suggestion"],
+        session["selected_item"],
+    )
+    trace.step("create_fit_card", inputs=(session["selected_item"], session["fit_card"]),
+           returned=session["fit_card"])
+    return session
 
 
 # ── running it directly ───────────────────────────────────────────────────────
