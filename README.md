@@ -241,13 +241,57 @@ that produced it:
 **Happy path**
 
 ```
+ python app.py ask ' cardigan under $50'
+[1] search_listings (via MCP)
+      in:  {'description': 'cardigan', 'size': None, 'max_price': 50.0}
+      out: 1 items: Knit Cardigan — Chunky Brown
+      →    1 match(es)
+[2] select_item
+      out: Knit Cardigan — Chunky Brown ($35.0, depop)
+[3] suggest_outfit
+      in:  Knit Cardigan — Chunky Brown ($35.0, depop)
+      out: Here are two complete outfits centered around your new chunky brown cardigan, built entirely from your wardrob…
+[4] create_fit_card
+      in:  ({'id': 'lst_008', 'title': 'Knit Cardigan — Chunky Brown', 'description': 'Super cozy oversized cardigan. Ear…
+      out: Nothing beats throwing on this super cozy chunky brown cardigan when the weather cools down, especially styled…
 
+  Found:    Knit Cardigan — Chunky Brown — $35.0 on depop
+
+  Outfit:   Here are two complete outfits centered around your new chunky brown cardigan, built entirely from your wardrobe:
+
+### Outfit 1: Casual & Minimalist Earth Tones
+* **Top:** White ribbed tank top
+* **Thrifted Item:** Chunky Brown Cardigan (layered over the tank)
+* **Bottoms:** Wide-leg khaki trousers
+* **Accessories:** Brown leather belt
+* **Shoes:** Chunky white sneakers
+* **Styling details:** Tuck the white tank into the khaki trousers, secure with the brown leather belt to tie the earth tones together, and throw the oversized brown cardigan on top. Finish with chunky white sneakers for a clean, relaxed, everyday look.
+
+### Outfit 2: Contrast Denim & Edge
+* **Top:** White ribbed tank top
+* **Thrifted Item:** Chunky Brown Cardigan (layered over the tank)
+* **Bottoms:** Baggy straight-leg jeans, dark wash
+* **Shoes:** Black combat boots
+* **Accessories:** Black crossbody bag
+* **Styling details:** Pair the fitted white tank with the baggy dark wash jeans for a balanced silhouette. Layer the cozy brown cardigan over top for warmth and texture. Ground the outfit with black combat boots and add the black crossbody bag for an effortless, slightly grunge-leaning everyday fit.
+
+  Fit card: Nothing beats throwing on this super cozy chunky brown cardigan when the weather cools down, especially styled with wide-leg trousers or baggy denim. Grab it on Depop right now for just $35 to instantly level up your autumn layering game.
+
+2 model calls this session, 1741 prompt + 316 output tokens
 ```
 
 **Empty search**
 
 ```
+ python app.py ask 'vintage saree under $1'
+[1] search_listings (via MCP)
+      in:  {'description': 'vintage saree', 'size': None, 'max_price': 1.0}
+      out: [] (empty)
+      →    0 match(es)
 
+  No matching items were found. Try changing the description, size, or maximum price and search again.
+
+0 model calls this session
 ```
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
