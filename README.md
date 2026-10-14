@@ -159,6 +159,11 @@ $ python -c "from tools import suggest_outfit; from utils.data_loader import get
 - *What came back:* Copilot pointed out that my third criterion was too general because it did not specify how to verify that the listing found by search_listings was passed correctly to suggest_outfit.
 - *What I changed:* I made the criterion more precise by requiring the listing ID returned by search_listings to match the listing ID received by suggest_outfit, which made the state transfer easy to test and verify.
 
+**Moment 3**
+- *What I asked for:* I asked Copilot to help me understand how to direct the tool call to MCP servers instead of directly callinf the function.
+- *What came back:* CIt helped me understand what is MCP and why it is used and how to call the tool via MCP server.
+
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -538,17 +543,6 @@ All of my criteria have been met. I think they are generally strong, but in futu
 ---
 
 ## Loop Trace
-
-<!-- One full run, printed step by step, with the MCP call visible in it.
-
-     `python app.py ask '...' --trace` once you've added the trace.step()
-     calls in Milestone 2.
-
-     Worth pasting BOTH the happy path and the empty-search path. The empty
-     one should be visibly shorter, because it stops. If your two traces are
-     the same length, your branch isn't working — and this is the fastest way
-     anyone will ever find that out. -->
-
 **Happy path**
 
 ```
@@ -606,10 +600,7 @@ All of my criteria have been met. I think they are generally strong, but in futu
 0 model calls this session
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+**On the MCP move:** I have re-written the function call to search_listings in run_eval.py, so that it is called through MCP server instead of calling it directly. The only change is that how the answer is returned from the search_listings function and other than that, I have not notived any chnages and have not faced any problems for calling the search_listings function through MCP.
 
 
 
