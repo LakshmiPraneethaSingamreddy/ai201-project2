@@ -4,6 +4,42 @@ Everything about how the starter works and how to use it.
 
 ---
 
+## Local deployment with logs (Path B)
+
+FitFindr uses the local-with-logs deployment path. It runs on your computer
+with Flask and writes one structured JSON record per request to
+`logs/fitfindr.jsonl`. Both successful requests and failed requests are
+recorded.
+
+### Environment requirements
+
+- Windows PowerShell
+- Python 3.11, 3.12, or 3.13
+- An internet connection for model requests
+- A Gemini API key stored in `.env`
+- The dependencies listed in `requirements.txt`
+
+This project does not load a model file locally. It sends model requests
+through the configured Gemini API.
+
+### Windows setup
+
+From the repository root, run:
+
+```powershell
+py -3.11 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+copy .env.example .env
+```
+
+Open `.env` and set `GEMINI_API_KEY` to your own key. Do not commit `.env`.
+
+The exact startup command, test requests, and log-reading instructions are in
+the Unit 9 section below.
+
+---
+
 ## Before your first class
 
 Setup happens **before class**. The [environment setup page](../pages/ide_setup)
@@ -119,20 +155,62 @@ Useful flags on `ask`:
 
 ---
 
-## Running it somewhere else — **unit 9**
+## **UNIT 9: Running it Locally**
 
-Everything above exits when the command finishes. A host has nothing to keep
-running, so before you can deploy this you need something that stays up.
-`serve.py` is that: the same `run_agent()`, behind two HTTP routes.
+`serve.py` keeps the same `run_agent()` running behind two HTTP routes.
 
-On your machine:
+### Local server
 
-```bash
+From the repository root, with the virtual environment activated, run this
+exact command:
+
+```powershell
 python serve.py
-curl -X POST http://localhost:5000/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"query": "vintage graphic tee under $30"}'
 ```
+
+The server listens on `http://localhost:5000` by default.
+
+In a second PowerShell window, activate the same environment:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Check that the server is awake:
+
+```powershell
+curl.exe http://localhost:5000/health
+```
+
+Send a successful request:
+
+```powershell
+curl.exe -X POST http://localhost:5000/ask `
+  -H "Content-Type: application/json" `
+  -d '{"query":"vintage graphic tee under $30"}'
+```
+
+Check the failure path with an empty request:
+
+```powershell
+curl.exe -X POST http://localhost:5000/ask `
+  -H "Content-Type: application/json" `
+  -d '{}'
+```
+
+Read the structured records after each request:
+
+```powershell
+Get-Content .\logs\fitfindr.jsonl
+```
+
+Each record includes a timestamp, request input, response status, duration,
+model-call count, and error status. Failed requests are logged as well; they
+are not represented only by a missing record.
+
+Stop the server with `Ctrl+C`.
+
+### Hosted server
 
 On a host, the start command is:
 
@@ -149,9 +227,10 @@ gunicorn serve:app
 | `gunicorn serve:app`, exactly | Not `-k gevent`, not `-k eventlet`, not wrapped for uvicorn. `mcp_client.call_tool` uses `asyncio.run()`, which won't start inside a running event loop, so an async worker breaks **every** MCP call — and only once you've deployed it |
 | The first request is slow | The free tier puts your app to sleep after about fifteen minutes of nothing. The next request wakes it up and waits for it — around a minute. Not a bug, and worth knowing before you demo it |
 
-`serve.py` ships with **no logging and no timing in it**, on purpose. You add
-that yourself in the follow-along, before you deploy — instrumenting first is
-the point of the session.
+`serve.py` writes structured request logs and timing information to
+`logs/fitfindr.jsonl` for this local deployment. The log includes both
+successful and failed requests without recording API keys, wardrobe contents,
+prompts, or model responses.
 
 ---
 
