@@ -185,17 +185,13 @@ curl.exe http://localhost:5000/health
 Send a successful request:
 
 ```powershell
-curl.exe -X POST http://localhost:5000/ask `
-  -H "Content-Type: application/json" `
-  -d '{"query":"vintage graphic tee under $30"}'
+curl.exe -X POST http://localhost:5000/ask -H "Content-Type: application/json" -d '{\"query\": \"vintage graphic tee under $30\"}'
 ```
 
 Check the failure path with an empty request:
 
 ```powershell
-curl.exe -X POST http://localhost:5000/ask `
-  -H "Content-Type: application/json" `
-  -d '{}'
+curl.exe -X POST http://localhost:5000/ask -H "Content-Type: application/json" -d '{}'
 ```
 
 Read the structured records after each request:
