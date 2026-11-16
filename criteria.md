@@ -94,9 +94,13 @@ For every test, either success or failed, it must be logged in the log file
 
 ---
 
-## 4. In at least 4 of 5 successful runs, the listing ID returned by search_listings matches the listing ID passed to suggest_outfit.
+## 4.Original:  In at least 4 of 5 successful runs, the listing ID returned by search_listings matches the listing ID passed to suggest_outfit.
 **Why this target:**
 For atleast 4 of 5 tests, the listing id retuened by the search_listings must match the listing id passed to suggest_outfit function.
+
+## 4.Revised:  For 5 of 5 simulated model/API failures, the response contains a non-empty error message, no traceback, and no fit card.
+**Why this target:**
+A model or API failure should be handled consistently every time because the user cannot fix or continue from an incomplete outfit response so testing this confirms that error-handling path does not depend on timing or model output and return clear error message without exposing a traceback or an incomplete fit card.
 
 ---
 

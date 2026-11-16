@@ -873,6 +873,21 @@ Criterion 5: missing query field
 **File:** run_extensions.py
 **Function:** main()
 
+**Diagnoses:**
+     All my five criteria are met, and there was no repeated failure across the runs. But, I think my criterion 4 is weaker, because it measures the behavior I had tested before too. In a future version, I would replace it a with a criterion that tests how the system handles the model/API failure because it tests the system behaviour when external dependency is unavailable.
+
+**RUN LOG AFTER:**
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1.For all 5 of 5 valid requests, the system returns a non-empty complete outfit suggestion and non-empty fit card.| 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. For all 5 of 5 time out requests, the system returns a clear error message instead of crashing or returning an incomplete result.| 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. For all 5 of 5 requests, every output appears in log file. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. For 5 of 5 simulated model/API failures, the response contains a non-empty error message, no traceback, and no fit card. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. For all 5 of 5 cases, malformed input returns HTTP 400 instead of HTTP 500. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+     All five criteria were met after the change. Before the change, model/API failures could return HTTP 200 with an error field, which made the request appear successful to an HTTP client. After the change, model/API failures return HTTP 500 with a readable error message and no usable fit card. This helped make failures easier for clients to detect and confirmed that the system handles unavailable model services correctly. The tradeoff is that clients must now handle HTTP 500 responses for service failures, while normal no-match responses remain HTTP 200 and malformed requests remain HTTP 400.
+
 <!-- ═════════════════════════════════════════════════════════════════════
 
      SUBMISSION CHECKLIST — unit 3

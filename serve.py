@@ -19,8 +19,10 @@ Two routes:
     GET  /health    is it awake?
 
 `/ask` returns the session dict from `run_agent()` as JSON, unchanged — the
-same keys you print from the command line, including `error`. Read
-`session["error"]` first, exactly as you do everywhere else.
+same keys you print from the command line, including `error`. Successful and
+no-match sessions use HTTP 200; malformed requests use HTTP 400; and external
+search, model, or fit-card failures use HTTP 500. Read `session["error"]`
+first, exactly as you do everywhere else.
 
 It runs **one request at a time**, and one route is deliberately slower than a
 web server has to be. The reason is worth reading before you deploy: see the
@@ -172,6 +174,19 @@ def finish_request_logging(response):
 
 _one_at_a_time = threading.Lock()
 
+_SERVER_FAILURE_PREFIXES = (
+    "Search service unavailable:",
+    "Search service returned an invalid result format.",
+    "Outfit suggestion failed:",
+    "Fit card creation failed:",
+)
+
+
+def _is_server_failure(session):
+    """Return whether an agent error came from an external service failure."""
+    error = session.get("error") if isinstance(session, dict) else None
+    return isinstance(error, str) and error.startswith(_SERVER_FAILURE_PREFIXES)
+
 
 @app.get("/health")
 def health():
@@ -239,6 +254,9 @@ def ask():
     # be waiting on.
     if failure is not None:
         return jsonify({"error": failure}), 500
+
+    if _is_server_failure(session):
+        return jsonify(session), 500
 
     return jsonify(session)
 

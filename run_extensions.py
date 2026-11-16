@@ -18,7 +18,7 @@ import traceback
 from pathlib import Path
 from unittest.mock import patch
 
-import agent
+from generate import ModelUnavailable
 import scenarios_extension
 import serve
 
@@ -30,7 +30,7 @@ TARGETS = {
     1: "5 of 5",
     2: "5 of 5",
     3: "5 of 5",
-    4: "4 of 5",
+    4: "5 of 5",
     5: "5 of 5",
 }
 
@@ -38,7 +38,7 @@ SOURCES = {
     1: "serve.py::ask",
     2: "serve.py::ask exception handling",
     3: "serve.py::finish_request_logging",
-    4: "agent.py::run_agent",
+    4: "serve.py::ask model/API failure handling",
     5: "serve.py::ask validation",
 }
 
@@ -56,16 +56,35 @@ def _post(client, scenario):
     }
 
 
+def _run_model_failure_case(client, scenario):
+    """Make the model dependency fail while using the real agent and route."""
+    listing = {
+        "id": "simulated_listing",
+        "title": "Simulated Listing",
+        "price": 25.0,
+        "platform": "test-store",
+    }
+    if scenario["fault"] == "timeout":
+        message = "Couldn't reach the model: simulated timeout"
+    else:
+        message = "The model API returned a simulated failure"
+
+    with (
+        patch("agent.call_tool", return_value=[listing]),
+        patch(
+            "tools.generate",
+            side_effect=ModelUnavailable(message),
+        ),
+    ):
+        return _post(client, scenario)
+
+
 def _run_http_case(scenario):
     """Run an HTTP scenario against the Flask application."""
     client = serve.app.test_client()
 
-    if scenario.get("fault") == "timeout":
-        with patch(
-            "serve.run_agent",
-            side_effect=TimeoutError("simulated request timeout"),
-        ):
-            result = _post(client, scenario)
+    if scenario.get("fault") in {"timeout", "model_failure"}:
+        result = _run_model_failure_case(client, scenario)
     else:
         result = _post(client, scenario)
 
@@ -87,7 +106,16 @@ def _run_http_case(scenario):
             result["status"] == scenario["expected_status"]
             and isinstance(error, str)
             and "timeout" in error.lower()
-            and "fit_card" not in body
+            and not body.get("fit_card")
+        )
+    elif criterion == 4:
+        error = body.get("error", "")
+        passed = (
+            result["status"] == scenario["expected_status"]
+            and isinstance(error, str)
+            and error.strip()
+            and "traceback" not in error.lower()
+            and not body.get("fit_card")
         )
     elif criterion == 5:
         passed = (
@@ -149,53 +177,11 @@ def _run_logging_case(scenario):
     }
 
 
-def _run_state_case(scenario):
-    """Run the agent with controlled tools and compare the listing IDs."""
-    item = {
-        "id": f"test_{scenario['name'].replace(' ', '_')}",
-        "title": "Test Listing",
-        "price": 25.0,
-        "platform": "test-store",
-    }
-    observed = {}
-
-    def fake_suggest(new_item, wardrobe):
-        observed["suggested_id"] = new_item["id"]
-        return "A complete outfit."
-
-    with (
-        patch("agent.call_tool", return_value=[item]),
-        patch("agent.suggest_outfit", side_effect=fake_suggest),
-        patch("agent.create_fit_card", return_value="A fit card."),
-    ):
-        session = agent.run_agent(scenario["query"], {"items": []})
-
-    selected_id = (session.get("selected_item") or {}).get("id")
-    passed = (
-        session.get("error") is None
-        and selected_id == item["id"]
-        and observed.get("suggested_id") == selected_id
-    )
-
-    return {
-        "passed": passed,
-        "actual": {
-            "selected_id": selected_id,
-            "suggested_id": observed.get("suggested_id"),
-            "error": session.get("error"),
-        },
-        "expected": scenario["expected"],
-        "source": SOURCES[scenario["criterion"]],
-    }
-
-
 def run_case(scenario):
     """Run one scenario and preserve failures as explicit test results."""
     try:
         if scenario["criterion"] == 3:
             return _run_logging_case(scenario)
-        if scenario["criterion"] == 4:
-            return _run_state_case(scenario)
         return _run_http_case(scenario)
     except Exception as exc:  # A crashed case must appear in the report.
         return {

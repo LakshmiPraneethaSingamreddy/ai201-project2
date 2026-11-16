@@ -167,40 +167,55 @@ SCENARIOS = [
         "criterion": 3,
     },
 
-    # Criterion 4: the selected listing ID reaches suggest_outfit.
+    # Criterion 4: model/API failures return HTTP 500 with a clear error.
     {
-        "name": "graphic tee listing ID reaches suggest_outfit",
-        "query": "vintage graphic tee under $30",
-        "wardrobe": "example",
-        "expected": "search_listings ID equals suggest_outfit ID",
+        "name": "graphic tee model failure",
+        "method": "POST",
+        "path": "/ask",
+        "payload": {"query": "vintage graphic tee under $30"},
+        "fault": "model_failure",
+        "expected_status": 500,
+        "expected": "error response, no traceback, and no fit card",
         "criterion": 4,
     },
     {
-        "name": "denim jacket listing ID reaches suggest_outfit",
-        "query": "denim jacket under $50",
-        "wardrobe": "example",
-        "expected": "search_listings ID equals suggest_outfit ID",
+        "name": "denim jacket model failure",
+        "method": "POST",
+        "path": "/ask",
+        "payload": {"query": "denim jacket under $50"},
+        "fault": "model_failure",
+        "expected_status": 500,
+        "expected": "error response, no traceback, and no fit card",
         "criterion": 4,
     },
     {
-        "name": "jeans listing ID reaches suggest_outfit",
-        "query": "black jeans size M under $40",
-        "wardrobe": "example",
-        "expected": "search_listings ID equals suggest_outfit ID",
+        "name": "jeans model failure",
+        "method": "POST",
+        "path": "/ask",
+        "payload": {"query": "black jeans size M under $40"},
+        "fault": "model_failure",
+        "expected_status": 500,
+        "expected": "error response, no traceback, and no fit card",
         "criterion": 4,
     },
     {
-        "name": "cardigan listing ID reaches suggest_outfit",
-        "query": "brown cardigan under $35",
-        "wardrobe": "example",
-        "expected": "search_listings ID equals suggest_outfit ID",
+        "name": "cardigan model failure",
+        "method": "POST",
+        "path": "/ask",
+        "payload": {"query": "brown cardigan under $35"},
+        "fault": "model_failure",
+        "expected_status": 500,
+        "expected": "error response, no traceback, and no fit card",
         "criterion": 4,
     },
     {
-        "name": "hoodie listing ID reaches suggest_outfit",
-        "query": "vintage hoodie under $45",
-        "wardrobe": "example",
-        "expected": "search_listings ID equals suggest_outfit ID",
+        "name": "hoodie model failure",
+        "method": "POST",
+        "path": "/ask",
+        "payload": {"query": "vintage hoodie under $45"},
+        "fault": "model_failure",
+        "expected_status": 500,
+        "expected": "error response, no traceback, and no fit card",
         "criterion": 4,
     },
 
@@ -267,18 +282,13 @@ def validate() -> list[str]:
 
         if not scenario.get("name"):
             problems.append(f"scenario {i} has no name")
-        if criterion in {1, 2, 3, 5}:
+        if criterion in {1, 2, 3, 4, 5}:
             if scenario.get("method") != "POST":
                 problems.append(f"scenario {i} must use POST")
             if scenario.get("path") != "/ask":
                 problems.append(f"scenario {i} must use /ask")
             if "payload" not in scenario:
                 problems.append(f"scenario {i} has no request payload")
-        if criterion == 4:
-            if not scenario.get("query", "").strip():
-                problems.append(f"scenario {i} has no query")
-            if scenario.get("wardrobe") != "example":
-                problems.append(f"scenario {i} must use the example wardrobe")
         if "expected_status" in scenario and not isinstance(
             scenario["expected_status"], int
         ):
