@@ -68,6 +68,44 @@ style description but violates the user's price ceiling or requested size.
 
 ---
 
+
+
+## Criteria for UNIT 9:
+
+---
+
+## 1. For all 5 of 5 valid requests, the system returns a non-empty complete outfit suggestion and non-empty fit card.
+
+**Why this target:**
+For all valid requests the system must fit an outfit and return the complete outfit suggestions based on wardrobe and also return a fit card
+---
+
+## 2. For all 5 of 5 time out requests, the system returns a clear error message instead of crashing or returning an incomplete result.
+
+**Why this target:**
+For the time out requests, it should return a error messaging saying that time out instead of crashing or returning an incomplete result
+
+---
+
+## 3. For all 5 of 5 requests, every output appears in log file.
+
+**Why this target:**
+For every test, either success or failed, it must be logged in the log file
+
+---
+
+## 4. In at least 4 of 5 successful runs, the listing ID returned by search_listings matches the listing ID passed to suggest_outfit.
+**Why this target:**
+For atleast 4 of 5 tests, the listing id retuened by the search_listings must match the listing id passed to suggest_outfit function.
+
+---
+
+## 5. For all 5 of 5 cases, malformed input returns HTTP 400 instead of HTTP 500.
+**Why this target:**
+For all 5 bad test cases(malformed input like empty query or invalid field) the system should return HTTP 400 instead of HHTP 500.
+
+---
+
 <!-- ─────────────────────────────────────────────────────────────────────────
      UNIT 4 — read this before you change anything above.
 
