@@ -627,6 +627,18 @@ All of my criteria have been met. I think they are generally strong, but in futu
 After making this fix, all of my criteria passed, and I ran the tests multiple times to confirm that everything continued to work correctly.
 
 
+<!-- ═══════════════════════ UNIT 9 — THE EXTENSION ═══════════════════════
+
+    
+     ═══════════════════════════════════════════════════════════════════ -->
+
+---
+## Capstone
+**System I Chose:** FirFindr
+**The Shape:** I chose Shape B because I want to make FitFindr handle situations where something goes wrong instead of only working when everything goes perfectly. I will add failure handling for problems like invalid input, an unavailable MCP server, model/API errors, timeouts, and rate limits. I will also deploy the agent through the existing HTTP server and add logging and timing so I can see what happened during each request. My goal is for the deployed system to return clear errors, avoid continuing with incomplete results, and record enough information to measure how it behaves on both successful and failed requests.
+
+**Out of Scope:** I am not adding a second retrieval strategy or changing how listings are ranked. I am not rebuilding the user interface or creating a separate frontend. I am also not adding more outfit-generation features; I am just focusing on making the existing flow reliable when failures occur.
+
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
