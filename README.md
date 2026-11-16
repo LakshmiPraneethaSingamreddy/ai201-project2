@@ -746,6 +746,16 @@ Output:
 
 The measured average was 6441.945 milliseconds, which is approximately 6.44 seconds per run. This is measured runtime, not a dollar estimate.
 
+For 100 people making one request each day, the measured runtime would be:
+
+```text
+100 requests × 6.441945 seconds per request = 644.1945 seconds
+644.1945 seconds ÷ 60 = 10.74 minutes of wall-clock compute time per day
+```
+
+I cannot calculate a dollar amount from this measurement alone because it
+measures runtime, not provider pricing or token charges.
+
 **RUN LOG BEFORE:**
 
  I created five test cases for each criterion in `scenarios_extension.py`. I ran all of the tests using `run_extensions.py`, and the results were saved in the `results` folder.
@@ -887,6 +897,28 @@ Criterion 5: missing query field
 | 5. For all 5 of 5 cases, malformed input returns HTTP 400 instead of HTTP 500. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
      All five criteria were met after the change. Before the change, model/API failures could return HTTP 200 with an error field, which made the request appear successful to an HTTP client. After the change, model/API failures return HTTP 500 with a readable error message and no usable fit card. This helped make failures easier for clients to detect and confirmed that the system handles unavailable model services correctly. The tradeoff is that clients must now handle HTTP 500 responses for service failures, while normal no-match responses remain HTTP 200 and malformed requests remain HTTP 400.
+
+**What's Still Broken:**
+
+No current criterion was missed in the after run. One limitation remains: the model/API failure test uses a simulated failure, so it confirms the app handles the error correctly but does not prove how it would behave during a real provider outage.
+
+**Next Step:**
+
+If this were a real service, I would first add a staging fault-injection test
+at the actual model and MCP client boundaries. That would verify the same
+HTTP 500 behavior against realistic transport failures without relying on a
+live provider outage.
+
+**How I Used AI:**
+**Moment 1**
+- *What I asked for:* I asked Copilot to help me implement run_extensions.py to test the capstone criteria
+- *What came back:* The first version was more complicated than necessary and duplicated some functionality that already existed in the project.
+- *What I changed:* I asked Copilot to reuse the existing patterns from run_eval.py and simplify the implementation instead of recreating functionality. This produced a cleaner runner that fit the project’s existing structure better.
+
+**Moment 2**
+- *What I asked for:* I asked Copilot to help me understand how to connect logging, model-failure handling, and the other extension features.
+- *What came back:* It explained where each part of the logic belongs, why it is needed, and how to integrate it with the existing system.
+
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
