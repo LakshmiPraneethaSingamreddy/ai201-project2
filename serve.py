@@ -27,26 +27,108 @@ web server has to be. The reason is worth reading before you deploy: see the
 note above `_one_at_a_time` below — it also decides which gunicorn worker you
 can use.
 
-⚠️ There is deliberately NO logging, NO timing and NO request counting in this
-file. That is unit 9's follow-along: you instrument this yourself, first, and
-then deploy it. A structured log you were handed teaches you nothing about
-what belongs in one — and the timing field is the one everybody skips.
+Request logs include a request ID, route, query, status, elapsed time, and safe
+outcome fields. `/ask` also records the number of search results and model
+calls used by that request. Wardrobe contents, prompts, and model responses
+are deliberately not logged. Logs are written to the console and to
+`logs/fitfindr.jsonl` for local deployment.
 """
 
+import json
+import logging
 import os
 import sys
 import threading
+import time
+import uuid
+from datetime import datetime, timezone
 
 # config first, and before anything that talks to the model: it loads your .env
 # and fixes the Windows console encoding for every module that imports it.
-import config  # noqa: F401
+import config
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 
 from agent import run_agent
+import generate
 from utils.data_loader import get_example_wardrobe
 
 app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
+
+
+class JsonLineFormatter(logging.Formatter):
+    """Format each file-log record as one structured JSON object."""
+
+    _fields = (
+        "request_id",
+        "method",
+        "path",
+        "query",
+        "status",
+        "duration_ms",
+        "search_results",
+        "model_calls",
+        "error",
+    )
+
+    def format(self, record):
+        entry = {
+            "timestamp": datetime.fromtimestamp(
+                record.created, timezone.utc
+            ).isoformat(),
+            "level": record.levelname,
+            "event": record.getMessage(),
+        }
+        for field in self._fields:
+            if hasattr(record, field):
+                entry[field] = getattr(record, field)
+        return json.dumps(entry, ensure_ascii=True)
+
+
+log_dir = config.ROOT / "logs"
+log_dir.mkdir(exist_ok=True)
+file_handler = logging.FileHandler(log_dir / "fitfindr.jsonl", encoding="utf-8")
+file_handler.setFormatter(JsonLineFormatter())
+app.logger.addHandler(file_handler)
+
+
+@app.before_request
+def start_request_logging():
+    """Attach request timing and a safe identifier to every incoming request."""
+    g.request_id = uuid.uuid4().hex[:12]
+    g.request_started_at = time.perf_counter()
+    g.model_calls_before = generate.call_count()
+    app.logger.info(
+        "request_started",
+        extra={
+            "request_id": g.request_id,
+            "method": request.method,
+            "path": request.path,
+        },
+    )
+
+
+@app.after_request
+def finish_request_logging(response):
+    """Log the outcome and duration, then return the unchanged response."""
+    elapsed_ms = (time.perf_counter() - g.request_started_at) * 1000
+    app.logger.info(
+        "request_completed",
+        extra={
+            "request_id": g.request_id,
+            "method": request.method,
+            "path": request.path,
+            "query": getattr(g, "query", ""),
+            "status": response.status_code,
+            "duration_ms": round(elapsed_ms, 2),
+            "search_results": getattr(g, "search_results", "-"),
+            "model_calls": generate.call_count() - g.model_calls_before,
+            "error": getattr(g, "agent_error", False),
+        },
+    )
+    response.headers["X-Request-ID"] = g.request_id
+    return response
 
 
 # ── one request at a time ─────────────────────────────────────────────────────
@@ -94,6 +176,7 @@ _one_at_a_time = threading.Lock()
 @app.get("/health")
 def health():
     """Is the server awake? A host pings something like this to find out."""
+    g.agent_error = False
     return jsonify({"status": "ok"})
 
 
@@ -109,7 +192,9 @@ def ask():
     """
     payload = request.get_json(silent=True) or {}
     query = (payload.get("query") or "").strip()
+    g.query = query
     if not query:
+        g.agent_error = True
         # 400 rather than a stack trace: the caller can act on this one.
         return jsonify({"error": "Send JSON with a 'query' field, e.g. "
                                  '{"query": "vintage graphic tee under $30"}'}), 400
@@ -143,6 +228,12 @@ def ask():
             session = run_agent(query, wardrobe)
         except Exception as exc:  # noqa: BLE001 — a 500 with a sentence beats a hang
             failure = f"{type(exc).__name__}: {exc}"
+
+    if failure is not None:
+        g.agent_error = True
+    else:
+        g.agent_error = bool(session.get("error"))
+        g.search_results = len(session.get("search_results") or [])
 
     # Outside the lock: building a response is not work the next caller should
     # be waiting on.
