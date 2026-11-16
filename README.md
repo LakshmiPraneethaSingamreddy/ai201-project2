@@ -639,6 +639,112 @@ After making this fix, all of my criteria passed, and I ran the tests multiple t
 
 **Out of Scope:** I am not adding a second retrieval strategy or changing how listings are ranked. I am not rebuilding the user interface or creating a separate frontend. I am also not adding more outfit-generation features; I am just focusing on making the existing flow reliable when failures occur.
 
+**Instrumentation:**
+
+
+I cloned the repository into a new folder and followed `RUNNING.md`. I created the virtual environment, installed the requirements, configured `.env`, started the local server with `python serve.py`, and tested both successful and rejected requests.
+
+Each request writes a structured JSON record to
+`logs/fitfindr.jsonl`.
+
+The records include:
+
+- `timestamp`
+- `query` — the request input
+- `status` — the HTTP result
+- `duration_ms` — request duration
+- `search_results`
+- `model_calls`
+- `error`
+
+The  ten successful records from a session are:
+
+```json
+
+{"timestamp": "2026-11-16T17:35:30.292110+00:00", "level": "INFO", "event": "request_started", "request_id": "335760dab956", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:35:31.870701+00:00", "level": "INFO", "event": "request_completed", "request_id": "335760dab956", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 1578.88, "search_results": 10, "model_calls": 0, "error": false}
+
+{"timestamp": "2026-11-16T17:37:53.236886+00:00", "level": "INFO", "event": "request_started", "request_id": "d9b2566855d6", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:01.605263+00:00", "level": "INFO", "event": "request_completed", "request_id": "d9b2566855d6", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 8363.06, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:02.620395+00:00", "level": "INFO", "event": "request_started", "request_id": "1dae05d6bdaa", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:08.579033+00:00", "level": "INFO", "event": "request_completed", "request_id": "1dae05d6bdaa", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 5958.64, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:09.589926+00:00", "level": "INFO", "event": "request_started", "request_id": "13fa23463365", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:15.017956+00:00", "level": "INFO", "event": "request_completed", "request_id": "13fa23463365", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 5428.2, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:16.033224+00:00", "level": "INFO", "event": "request_started", "request_id": "290cf9c1308c", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:21.207493+00:00", "level": "INFO", "event": "request_completed", "request_id": "290cf9c1308c", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 5173.21, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:22.228982+00:00", "level": "INFO", "event": "request_started", "request_id": "84ae07cb134a", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:26.100755+00:00", "level": "INFO", "event": "request_completed", "request_id": "84ae07cb134a", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 3874.27, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:27.111376+00:00", "level": "INFO", "event": "request_started", "request_id": "6ada638aca63", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:32.024737+00:00", "level": "INFO", "event": "request_completed", "request_id": "6ada638aca63", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 4910.01, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:33.031320+00:00", "level": "INFO", "event": "request_started", "request_id": "9afe21061e69", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:36.856866+00:00", "level": "INFO", "event": "request_completed", "request_id": "9afe21061e69", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 3826.22, "search_results": 10, "model_calls": 1, "error": true}
+
+{"timestamp": "2026-11-16T17:38:37.872053+00:00", "level": "INFO", "event": "request_started", "request_id": "e0720d62dfca", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:38:43.315742+00:00", "level": "INFO", "event": "request_completed", "request_id": "e0720d62dfca", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 5443.86, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:38:44.324388+00:00", "level": "INFO", "event": "request_started", "request_id": "ec083718e2fe", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:39:01.237112+00:00", "level": "INFO", "event": "request_completed", "request_id": "ec083718e2fe", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 16918.81, "search_results": 10, "model_calls": 2, "error": false}
+
+{"timestamp": "2026-11-16T17:39:02.260789+00:00", "level": "INFO", "event": "request_started", "request_id": "fd8f1819e5ca", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T17:39:06.783122+00:00", "level": "INFO", "event": "request_completed", "request_id": "fd8f1819e5ca", "method": "POST", "path": "/ask", "query": "vintage graphic tee under $30", "status": 200, "duration_ms": 4523.17, "search_results": 10, "model_calls": 2, "error": false}
+
+```
+
+**failed request:**
+The rejected empty-query request returned HTTP 400 and created a structured failure record in `logs/fitfindr.jsonl`.
+
+```json
+curl.exe -X POST http://localhost:5000/ask -H "Content-Type: application/json" -d '{}'
+
+     
+{"timestamp": "2026-11-16T18:05:07.811658+00:00", "level": "INFO", "event": "request_started", "request_id": "23d7b4f73a84", "method": "POST", "path": "/ask"}
+
+{"timestamp": "2026-11-16T18:05:07.811658+00:00", "level": "INFO", "event": "request_completed", "request_id": "23d7b4f73a84", "method": "POST", "path": "/ask", "query": "", "status": 400, "duration_ms": 0.35, "search_results": "-", "model_calls": 0, "error": true}
+```
+
+**What It Costs:**
+
+FitFindr run costs  are approximately **6.44 seconds of wall-clock compute time**.
+
+I measured this by disabling the response cache with: AI201_CACHE=0 so that for every request the model will be called instead of returning answer from cache. Then I  ran ten successful requests and averaged their duration_ms values from the ten request_completed records in logs/fitfindr.jsonl.
+
+
+     $successful = Get-Content .\logs\fitfindr.jsonl | ForEach-Object {
+     >>     $_ | ConvertFrom-Json
+     >> } | Where-Object {
+     >>     $_.event -eq "request_completed" -and $_.status -eq 200
+     >> } | Select-Object -Last 10
+     >> 
+     >> $successful | Measure-Object -Property duration_ms -Average
+
+Output: 
+
+     Count    : 10
+     Average  : 6441.945
+     Sum      : 
+     Maximum  : 
+     Minimum  : 
+     Property : duration_ms
+
+
+The measured average was 6441.945 milliseconds, which is approximately 6.44 seconds per run. This is measured runtime, not a dollar estimate.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
