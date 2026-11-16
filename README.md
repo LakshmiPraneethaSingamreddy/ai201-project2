@@ -746,6 +746,133 @@ Output:
 
 The measured average was 6441.945 milliseconds, which is approximately 6.44 seconds per run. This is measured runtime, not a dollar estimate.
 
+**RUN LOG BEFORE:**
+
+ I created five test cases for each criterion in `scenarios_extension.py`. I ran all of the tests using `run_extensions.py`, and the results were saved in the `results` folder.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. For all 5 of 5 valid requests, the system returns a non-empty complete outfit suggestion and non-empty fit card. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. For all 5 of 5 time out requests, the system returns a clear error message instead of crashing or returning an incomplete result. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. For all 5 of 5 requests, every output appears in log file.| 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. In at least 4 of 5 successful runs, the listing ID returned by search_listings matches the listing ID passed to suggest_outfit.| 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. For all 5 of 5 cases, malformed input returns HTTP 400 instead of HTTP 500. | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+
+Criterion 1: valid denim jacket request
+
+     - Source: `serve.py::ask`
+     - Pass: `True`
+     - Expected:
+     ```json
+     [
+     "outfit_suggestion",
+     "fit_card"
+     ]
+     ```
+     - Actual output:
+     ```json
+     {
+     "status": 200,
+     "body": {
+     "error": null,
+     "fit_card": "Scored this vintage Wrangler cropped denim jacket on Poshmark for just $42, and it\u2019s the ultimate blank canvas for layering. I love pairing the light wash with dark baggy denim and fresh white sneakers for an effortless streetwear vibe. It also looks amazing thrown over an oversized grey crewneck and khaki trousers for an easy mix of cool and warm tones.",
+     "outfit_suggestion": "Here are two complete outfits built around your new Wrangler light-wash cropped denim jacket using items from your wardrobe:\n\n### Outfit 1: Canadian Tuxedo / Streetwear Edge\n*Play with denim-on-denim by contrasting the light-wash jacket with dark bottoms.*\n\n* **Top:** White ribbed tank top (`w_003`) tucked in to highlight the cropped fit of the jacket.\n* **Bottoms:** Baggy straight-leg jeans, dark wash (`w_001`) \u2014 the high waist pairs great with the cropped jacket.\n* **Shoes:** Chunky white sneakers (`w_007`) to tie in the white tank top.\n* **Accessories:** Black crossbody bag (`w_010`).\n\n### Outfit 2: Casual Earth Tones\n*Contrast the cool light blue of the jacket with warm, neutral trousers.*\n\n* **Top:** Oversized grey crewneck sweatshirt (`w_004`) worn underneath as a cozy layer, letting the hem peek out below the cropped jacket.\n* **Bottoms:** Wide-leg khaki trousers (`w_002`).\n* **Shoes:** Black combat boots (`w_008`) to ground the lighter tones of the outfit.\n* **Accessories:** Brown leather belt (`w_009`) threaded through the trousers to pull the earth tones together.",
+     "parsed": {
+          "description": "denim jacket",
+          "max_price": 50.0,
+          "size": null
+     },
+     "query": "denim jacket under $50",
+          .......}}
+
+Criterion 2: hoodie timeout
+
+     - Source: `serve.py::ask exception handling`
+     - Pass: `True`
+     - Expected:
+     ```json
+     "timeout in error response"
+     ```
+     - Actual output:
+     ```json
+     {
+     "status": 500,
+     "body": {
+     "error": "TimeoutError: simulated request timeout"
+     },
+     "request_id": "4b66389aa7cd"
+     }
+     ```
+
+Criterion 3: graphic tee request is logged
+
+     - Source: `serve.py::finish_request_logging`
+     - Pass: `True`
+     - Expected:
+     ```json
+     {
+     "path": "logs/fitfindr.jsonl",
+     "event": "request_completed",
+     "fields": [
+     "request_id",
+     "status",
+     "duration_ms",
+     "error"
+     ]
+     }
+     ```
+     - Actual output:
+     ```json
+     {
+     "response": {
+     "status": 200,
+     "body": {
+          "error": null,
+          "fit_card": "Scored this soft, worn-in 2003 tour bootleg graphic tee on Depop for just $24, and it has the absolute best boxy fit. I love styling the faded black cotton either layered under a cropped zip hoodie for casual streetwear days or tucked into wide-leg khakis with heavy combat boots for a grunge edge.",
+          "outfit_suggestion": "Here are two complete outfits centered around your new vintage graphic tee, using pieces straight from your wardrobe:\n\n### Outfit 1: Y2K Streetwear Edge\n*Play up the bootleg band tee vibe with relaxed denim and classic streetwear layers.*\n* **Top:** Graphic Tee \u2014 2003 Tour Bootleg Style (Thrifted)\n* **Bottoms:** Baggy straight-leg jeans, dark wash (`w_001`)\n* **Outerwear:** Black cropped zip hoodie (`w_005`) worn unzipped over the tee\n* **Shoes:** Chunky white sneakers (`w_007`)\n* **Accessories:** Black crossbody bag (`w_010`)\n* **Styling details:** Let the hem of the boxy tee peek out from under the cropped zip hoodie for a layered, textured look. Pair with the baggy dark-wash jeans and finish with the chunky white sneakers and crossbody bag for an easy everyday streetwear fit.\n\n### Outfit 2: Grunge-Inspired Contrast\n*Lean into the grunge aesthetic by pairing the faded black tee with khaki and heavy boots.*\n* **Top:** Graphic Tee \u2014 2003 Tour Bootleg Style (Thrifted)\n* **Bottoms:** Wide-leg khaki trousers (`w_002`)\n* **Outerwear:** Vintage black denim jacket (`w_006`)\n* **Shoes:** Black combat boots (`w_008`)\n* **Accessories:** Brown leather belt (`w_009`)\n* **Styling details:** Tuck the graphic tee loosely into the wide-leg khaki trousers, cinched with the brown leather belt to add definition. Throw on the slightly cropped black denim jacket and anchor the look with the black combat boots to lean into the vintage, worn-in edge of the tee.",
+          .....}}}
+
+
+Criterion 4: hoodie listing ID reaches suggest_outfit
+
+     - Source: `agent.py::run_agent`
+     - Pass: `True`
+     - Expected:
+     ```json
+     "search_listings ID equals suggest_outfit ID"
+     ```
+     - Actual output:
+     ```json
+     {
+     "selected_id": "test_hoodie_listing_ID_reaches_suggest_outfit",
+     "suggested_id": "test_hoodie_listing_ID_reaches_suggest_outfit",
+     "error": null
+     }
+     ```
+
+Criterion 5: missing query field
+
+     - Source: `serve.py::ask validation`
+     - Pass: `True`
+     - Expected:
+     ```json
+     "error response and no HTTP 500"
+     ```
+     - Actual output:
+     ```json
+     {
+     "status": 400,
+     "body": {
+     "error": "Send JSON with a 'query' field, e.g. {\"query\": \"vintage graphic tee under $30\"}"
+     },
+     "request_id": "b058b4e5c700"
+     }
+     ```
+
+**File:** run_extensions.py
+**Function:** main()
+
 <!-- ═════════════════════════════════════════════════════════════════════
 
      SUBMISSION CHECKLIST — unit 3
