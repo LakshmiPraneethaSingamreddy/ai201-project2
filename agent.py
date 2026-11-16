@@ -15,8 +15,8 @@ Build and test your three tools in `tools.py` first. Then come here.
 import re
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
-from generate import ModelUnavailable
-from mcp_client import call_tool
+from generate import ModelUnavailable, QuotaGuard
+from mcp_client import MCPError, call_tool
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -93,6 +93,15 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     listings match the parsed query.
     """
     session = new_session(query, wardrobe)
+    if not isinstance(query, str) or not query.strip():
+        session["error"] = "Please provide a non-empty search query."
+        trace.step(
+            "validate_query",
+            returned=query,
+            note="invalid query; stopping",
+        )
+        return session
+
     count = 1
 
     count+=1
@@ -103,7 +112,34 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     count += 1
     trace.check_iterations(count)
     #results = search_listings(parsed["description"], parsed["size"], parsed["max_price"])
-    results = call_tool("search_listings", {"description": parsed["description"], "size": parsed["size"], "max_price": parsed["max_price"]})
+    try:
+        results = call_tool(
+            "search_listings",
+            {
+                "description": parsed["description"],
+                "size": parsed["size"],
+                "max_price": parsed["max_price"],
+            },
+        )
+    except MCPError as exc:
+        session["error"] = f"Search service unavailable: {exc}"
+        trace.step(
+            "search_listings (via MCP)",
+            inputs=str(parsed),
+            note=f"failed: {exc}",
+        )
+        return session
+
+    if not isinstance(results, list):
+        session["error"] = "Search service returned an invalid result format."
+        trace.step(
+            "search_listings (via MCP)",
+            inputs=str(parsed),
+            returned=results,
+            note="invalid result format; stopping",
+        )
+        return session
+
     session["search_results"] = results
     trace.step("search_listings (via MCP)", inputs=str(parsed), returned=results,
            note=f"{len(results)} match(es)")
@@ -117,16 +153,59 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
     session["selected_item"] = results[0]
     trace.step("select_item", returned = session["selected_item"])
-    session["outfit_suggestion"] = suggest_outfit(
-        session["selected_item"],
-        session["wardrobe"],
-    )
+    try:
+        session["outfit_suggestion"] = suggest_outfit(
+            session["selected_item"],
+            session["wardrobe"],
+        )
+    except (ModelUnavailable, QuotaGuard, RuntimeError) as exc:
+        session["error"] = f"Outfit suggestion failed: {exc}"
+        trace.step(
+            "suggest_outfit",
+            inputs=session["selected_item"],
+            note=f"failed: {exc}",
+        )
+        return session
+
+    if (
+        not isinstance(session["outfit_suggestion"], str)
+        or not session["outfit_suggestion"].strip()
+    ):
+        session["error"] = "Outfit suggestion returned no usable text."
+        trace.step(
+            "suggest_outfit",
+            inputs=session["selected_item"],
+            returned=session["outfit_suggestion"],
+            note="empty result; stopping",
+        )
+        return session
+
     trace.step("suggest_outfit", inputs=session["selected_item"],
            returned=session["outfit_suggestion"])
-    session["fit_card"] = create_fit_card(
-        session["outfit_suggestion"],
-        session["selected_item"],
-    )
+    try:
+        session["fit_card"] = create_fit_card(
+            session["outfit_suggestion"],
+            session["selected_item"],
+        )
+    except (ModelUnavailable, QuotaGuard, RuntimeError) as exc:
+        session["error"] = f"Fit card creation failed: {exc}"
+        trace.step(
+            "create_fit_card",
+            inputs=session["selected_item"],
+            note=f"failed: {exc}",
+        )
+        return session
+
+    if not isinstance(session["fit_card"], str) or not session["fit_card"].strip():
+        session["error"] = "Fit card creation returned no usable text."
+        trace.step(
+            "create_fit_card",
+            inputs=session["selected_item"],
+            returned=session["fit_card"],
+            note="empty result; stopping",
+        )
+        return session
+
     trace.step("create_fit_card", inputs=(session["selected_item"], session["fit_card"]),
            returned=session["fit_card"])
     return session
