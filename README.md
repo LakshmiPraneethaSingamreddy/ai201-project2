@@ -635,9 +635,18 @@ After making this fix, all of my criteria passed, and I ran the tests multiple t
 ---
 ## Capstone
 **System I Chose:** FirFindr
+**What This Extends:** FitFindr already searches thrift listings, suggests outfits, and creates fit cards. This extension adds an HTTP endpoint around that existing flow, handles invalid input, timeouts, MCP failures, and model/API failures, and records the outcome and timing of each request.
+
 **The Shape:** I chose Shape B because I want to make FitFindr handle situations where something goes wrong instead of only working when everything goes perfectly. I will add failure handling for problems like invalid input, an unavailable MCP server, model/API errors, timeouts, and rate limits. I will also deploy the agent through the existing HTTP server and add logging and timing so I can see what happened during each request. My goal is for the deployed system to return clear errors, avoid continuing with incomplete results, and record enough information to measure how it behaves on both successful and failed requests.
 
 **Out of Scope:** I am not adding a second retrieval strategy or changing how listings are ranked. I am not rebuilding the user interface or creating a separate frontend. I am also not adding more outfit-generation features; I am just focusing on making the existing flow reliable when failures occur.
+
+**Running It:** I followed the setup steps in [`RUNNING.md`](RUNNING.md),
+created the virtual environment, installed the requirements, configured the
+`.env` file, and started the server with `python serve.py`. The deployed
+endpoint is available at `POST /ask`. I ran the extension tests with
+`python run_extensions.py --label before` and
+`python run_extensions.py --label after`.
 
 **Instrumentation:**
 
@@ -900,7 +909,7 @@ Criterion 5: missing query field
 
 **What's Still Broken:**
 
-No current criterion was missed in the after run. One limitation remains: the model/API failure test uses a simulated failure, so it confirms the app handles the error correctly but does not prove how it would behave during a real provider outage.
+All five criteria passed in the after run. I realized that the old Criterion 4 repeated something I had already tested, and its 4-of-5 target was too lenient, so I replaced it with a model/API failure test and raised the target to 5 of 5. The remaining limitation is that the failure is simulated, so the test confirms the app handles the error correctly but does not show how it would respond to a real provider outage
 
 **Next Step:**
 
